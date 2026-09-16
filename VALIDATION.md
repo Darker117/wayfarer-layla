@@ -1,5 +1,13 @@
 # Validation
 
+## Version 1.1.2 — Stop button fix
+
+The previous release reproduced an unwanted second `send_message` after clicking Stop: React reused the button as a submit button before the click’s default action finished. The fix prevents that default action and gives Send and Stop distinct element keys. Cancellation still uses the SDK’s abort signal and native cancel command.
+
+The production build and all **8 browser integration checks** pass. The regression check requires exactly one cancel per deliberate send, immediate Back availability, preservation of the unsent draft, no saved partial turn, and a successful second send/cancel cycle. It failed against 1.1.1 by observing two sends after one click, and passes with the fix.
+
+
+
 ## Version 1.1.1
 
 - TypeScript and the self-contained production build pass.

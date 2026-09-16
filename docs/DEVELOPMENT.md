@@ -4,7 +4,7 @@ A mobile-first text-adventure studio: create reusable worlds, play with your loc
 
 ## Import on Android
 
-1. Copy `release/wayfarer-1.1.1.zip` to the phone's Downloads folder.
+1. Copy `release/wayfarer-1.1.2.zip` to the phone's Downloads folder.
 2. In Layla, open **Apps → + → Import → Zip File** and choose the ZIP.
 3. Return to **Apps**, search **Wayfarer**, and open its tile. The Browse Apps page can keep showing an Add button after a custom ZIP import on 7.4; launch from the main Apps list. Choose a scenario, then **Begin adventure**.
 4. Write a **Do**, **Say**, or **Story** action, or press the send arrow with an empty box to **continue**. Layla uses its currently configured model. No API key is required.

@@ -25,7 +25,7 @@ Screenshots use the included sample world and development demo. Actual story res
 
 ## Download and install
 
-1. Download **wayfarer-1.1.1.zip** from this repository's **Releases** section. Use the attached app ZIP, rather than GitHub's automatically generated source archive.
+1. Download **wayfarer-1.1.2.zip** from this repository's **Releases** section. Use the attached app ZIP, rather than GitHub's automatically generated source archive.
 2. Copy it to your Android phone.
 3. In Layla, open **Apps → + → Import → Zip File**, select the ZIP, and import it.
 4. Return to the main **Apps** list, open **Wayfarer**, and begin an adventure.
