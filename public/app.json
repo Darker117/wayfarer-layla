@@ -1,0 +1,7 @@
+{
+  "title": "Wayfarer",
+  "tagline": "Worlds within words. Your next adventure starts here.",
+  "description": "Create, play, and keep your own text adventures with Layla. Includes reusable scenarios, story cards, faithful AI Dungeon JSON imports, private saves, Layla memory linking, and isolated AI Dungeon-style scripts with Inner Self and Auto-Cards presets.",
+  "iconUri": "icon.png",
+  "backgroundImgUri": "cover.png"
+}
