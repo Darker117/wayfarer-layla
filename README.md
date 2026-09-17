@@ -24,12 +24,16 @@ Wayfarer is a mobile-first mini app for **Layla**
 
 ## Download and install
 
-1. Download **wayfarer-1.1.2.zip** from this repository's **Releases** section. Use the attached app ZIP.
+1. Download **wayfarer-1.1.3.zip** from this repository's **Releases** section. Use the attached app ZIP.
 2. Copy it to your Android phone.
 3. In Layla, open **Apps → + → Import → Zip File**, select the ZIP, and import it.
 4. Return to the main **Apps** list, open **Wayfarer**, and begin an adventure.
 
-For an update, export a backup first, import over the existing Wayfarer app, then fully restart Layla before reopening it. This avoids a stale database connection observed on Layla 7.4.
+For an update, export a backup first, import over the existing Wayfarer app, then fully restart Layla before reopening it.
+
+### If the library cannot be opened
+
+Layla 7.4 can keep a failed native database connection alive, including during ordinary use. If Wayfarer says **Layla needs a full restart**, open **Android Settings → Apps → Layla → Force stop**, then launch Layla and open Wayfarer. Use **Force stop**, keeping the app's storage and data. Reloading the mini app alone may repeat the error. This recovered the current library in device testing; the underlying connection lifecycle needs a Layla host fix.
 
 Generation uses Layla's configured model. Wayfarer requires no separate API key. Tested with **Layla 7.4.0 Direct on Android**
 

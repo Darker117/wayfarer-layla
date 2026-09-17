@@ -1,5 +1,15 @@
 # Validation
 
+## Version 1.1.3 — Database recovery guidance and storage checks
+
+- Reproduced `NativeDatabase.execAsync` / `java.lang.NullPointerException` on Layla 7.4.0 Direct during startup, without a ZIP import in that session. A page retry failed again. Force stopping and relaunching Layla recovered the current library. A subsequent ordinary mini-app exit/reopen succeeded.
+- The failing native initialization belongs to Layla. Its SDK provides no native connection reset API. The exact event that originally invalidated the connection remains unconfirmed; this release improves recovery guidance and storage validation, not the host's native lifecycle.
+- Startup now distinguishes this host failure and gives explicit Android Force stop steps. Original error text remains available under Error details.
+- An invalid result or missing/null payload can no longer be mistaken for an empty library and overwritten by starter data. A save requires exactly one confirmed affected row; failed writes are not replayed automatically.
+- Schema initialization is shared by concurrent operations, and failed initialization does not remain cached by Wayfarer.
+- All **42 core tests** and **10 browser integration checks** pass, including the real SDK bridge with simulated native failures and recovery. Production TypeScript/build checks pass.
+- Installed on the physical device. A temporary test adventure saved and survived a full Layla restart. After removing that test entry, a fresh export matched the complete pre-update library exactly. The revised error screen also fits at 320 px with its technical details expanded.
+
 ## Version 1.1.2 — Stop button fix
 
 The previous release reproduced an unwanted second `send_message` after clicking Stop: React reused the button as a submit button before the click’s default action finished. The fix prevents that default action and gives Send and Stop distinct element keys. Cancellation still uses the SDK’s abort signal and native cancel command.
@@ -25,4 +35,4 @@ Physical-device testing uses a REDMAGIC 11 Pro with Android 16 and Layla 7.4.0 D
 
 Local backup comparisons and phone screenshots are kept out of the public repository because they may contain personal stories or device details. Public screenshots show only bundled sample worlds and demo data.
 
-When updating an existing installation, fully restart Layla after overwriting the app ZIP. Layla 7.4 can otherwise retain a stale database connection; clearing app data is unnecessary.
+When updating an existing installation, fully restart Layla after overwriting the app ZIP. A native database connection failure can also recur during ordinary use. If page retry fails, use Android Settings → Apps → Layla → Force stop, then reopen Wayfarer. Clearing app data is unnecessary.

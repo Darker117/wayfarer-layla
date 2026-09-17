@@ -43,3 +43,5 @@ h1,h2,h3{font-family:inherit;font-weight:650;color:#f2f3f5}h1{font-size:30px;lin
 @media(max-width:580px){.card-manager>.toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px 44px;gap:8px}.card-manager>.toolbar .button{font-size:12px;padding:10px 8px;gap:6px}}
 @media(max-width:360px){.card-manager>.toolbar .button{font-size:11px;padding:10px 5px}.card-manager>.toolbar .button svg{display:none}}
 
+
+.startup-error-detail{overflow-wrap:anywhere;white-space:pre-wrap}

@@ -4,12 +4,22 @@ A mobile-first text-adventure studio: create reusable worlds, play with your loc
 
 ## Import on Android
 
-1. Copy `release/wayfarer-1.1.2.zip` to the phone's Downloads folder.
+1. Copy `release/wayfarer-1.1.3.zip` to the phone's Downloads folder.
 2. In Layla, open **Apps → + → Import → Zip File** and choose the ZIP.
 3. Return to **Apps**, search **Wayfarer**, and open its tile. The Browse Apps page can keep showing an Add button after a custom ZIP import on 7.4; launch from the main Apps list. Choose a scenario, then **Begin adventure**.
 4. Write a **Do**, **Say**, or **Story** action, or press the send arrow with an empty box to **continue**. Layla uses its currently configured model. No API key is required.
 
 Built for **Layla 7.4.0 Direct**. The pinned SDK 7.5.2 automatically uses the older host protocol; this app does not depend on native model tool calling.
+
+## Database startup and recovery
+
+Wayfarer loads its library through the SDK's private SQLite API. Only a successful read with no rows creates a new library; malformed results, invalid saved JSON, and native failures stop startup without writing a replacement. Writes require exactly one confirmed affected row. Concurrent operations share schema initialization; a rejected initialization can be attempted again, and failed writes are not automatically replayed.
+
+The Android error `NativeDatabase.execAsync` with `java.lang.NullPointerException` occurs inside Layla's native database connection setup. The 7.4 host caches its database-opening promise; page reloads do not necessarily create a fresh native connection. The public SDK exposes SQL execution but no connection reset/open/close API. Wayfarer reports the error with **Android Settings → Apps → Layla → Force stop** recovery steps and retains the original error in **Error details**. This patch does not repair the host's native handle.
+
+Testing reproduced the failure without importing a new ZIP in that session. A full process restart recovered the existing library; ordinary exit/reopen subsequently succeeded. The exact earlier event that invalidated the handle is unconfirmed. A similar Android native-handle failure is documented in [Expo issue #48999](https://github.com/expo/expo/issues/48999); its underlying mechanism has not been established for this Layla build.
+
+Storage regression tests cover rejected startup, recovery, malformed rows, confirmed writes, and initialization concurrency. Browser tests use the real SDK with a controlled host bridge to verify failure guidance, no browser-storage fallback, and loading the unchanged library after simulated host recovery.
 
 ## Using Wayfarer
 
