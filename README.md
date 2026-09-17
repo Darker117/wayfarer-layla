@@ -2,7 +2,7 @@
 
 Create worlds, play AI-powered text adventures, and keep your stories on your device.
 
-Wayfarer is a mobile-first mini app for **Layla**, with a charcoal-and-blue interface that blends soft raised surfaces with frosted glass controls.
+Wayfarer is a mobile-first mini app for **Layla**
 
 ## A look inside
 
@@ -12,7 +12,6 @@ Wayfarer is a mobile-first mini app for **Layla**, with a charcoal-and-blue inte
   <img src="docs/screenshots/cards.png" width="240" alt="Manage characters and world lore with story cards" />
 </p>
 
-Screenshots use the included sample world and development demo. Actual story responses come from your configured Layla model.
 
 ## What you can do
 
@@ -25,14 +24,14 @@ Screenshots use the included sample world and development demo. Actual story res
 
 ## Download and install
 
-1. Download **wayfarer-1.1.2.zip** from this repository's **Releases** section. Use the attached app ZIP, rather than GitHub's automatically generated source archive.
+1. Download **wayfarer-1.1.2.zip** from this repository's **Releases** section. Use the attached app ZIP.
 2. Copy it to your Android phone.
 3. In Layla, open **Apps → + → Import → Zip File**, select the ZIP, and import it.
 4. Return to the main **Apps** list, open **Wayfarer**, and begin an adventure.
 
 For an update, export a backup first, import over the existing Wayfarer app, then fully restart Layla before reopening it. This avoids a stale database connection observed on Layla 7.4.
 
-Generation uses Layla's configured model. Wayfarer requires no separate API key. Tested with **Layla 7.4.0 Direct on Android**; a normal browser supports editing and local saves but requires Layla for real generation.
+Generation uses Layla's configured model. Wayfarer requires no separate API key. Tested with **Layla 7.4.0 Direct on Android**
 
 ## More
 
