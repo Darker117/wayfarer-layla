@@ -4,13 +4,13 @@ Generate videos on your PC from the Wayfarer mini-app in Layla. This Windows com
 
 ## Start here
 
-1. Extract **wayfarer-pc-companion-1.4.0.zip** into a folder on your PC.
+1. Extract **wayfarer-pc-companion-1.4.1.zip** into a folder on your PC.
 2. Check the [requirements and setup instructions](../docs/VIDEO.md#start-the-pc-companion). Node.js, ComfyUI, Comfy MCP, FFmpeg and the workflow's model files are installed separately.
 3. Start ComfyUI, then double-click **Start-Wayfarer-PC-Companion.cmd** in this folder.
 4. The companion opens in your browser. Create a code for **10, 20, or 30 minutes**, or **Forever** (the default). Saved codes can be copied, reused and deleted.
 5. In Wayfarer 1.4 or newer, open **Video settings** and enter your PC's private HTTPS address and the code. Choose **Pair desktop**.
 
-Use the [Wayfarer mini-app download](https://github.com/Darker117/wayfarer-layla/releases/tag/v1.4.0) on the phone. The PC companion stays on the PC.
+Use the [Wayfarer mini-app download](https://github.com/Darker117/wayfarer-layla/releases/tag/v1.4.1) on the phone. The PC companion stays on the PC.
 
 ## Connection codes
 

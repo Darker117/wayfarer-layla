@@ -2,10 +2,10 @@
 
 ## Make a clip
 
-1. Open an adventure and write a scene in the existing story composer.
-2. Open **Video settings** below the composer to pair the desktop and choose options.
-3. Press **Video**, beside Do / Say / Think / Story. It starts preparation and generation directly. Your story draft and selected action stay intact; no story turn is added.
-4. Close the studio to keep reading or writing while ComfyUI renders. Reopen it to see progress, cancel an owned clip, play, save or share the result.
+1. Open **Video settings** at the bottom left of the composer to pair your desktop and choose options. **Adventure videos** in these settings lets you view, save, share, cancel or delete clips.
+2. Select **Video**, beside Do / Say / Think / Story. It selects the input mode without opening settings or starting a render.
+3. Write your scene, then press **Send** (the up-arrow), or Ctrl/Cmd+Enter. Wayfarer uses your saved video options and clears the draft once the desktop accepts it. An empty Video input cannot continue the story.
+4. Progress and the finished video appear directly in the story, between the surrounding AI passages. Play, save, share and remove controls are available there too. You can continue writing while ComfyUI renders; reopening the adventure recovers the clips and their positions.
 
 **Enhance with AI** is optional and defaults on. **AI chooses length** is independent: it can choose seconds without rewriting the prompt. If either option is on, Wayfarer makes one separate Layla model call with a structured result. With both off, the scene goes to the gateway with no Layla call, so a normal desktop browser can generate video too. Narrative scripts never run for video. Story generation waits while video uses Layla; after preparation, video rendering does not lock the story controls.
 
@@ -21,7 +21,7 @@ Rendering time depends on hardware, cache state and clip length. A 225-second re
 
 ## Start the PC Companion
 
-Download **wayfarer-pc-companion-1.4.0.zip** from [Wayfarer's GitHub releases](https://github.com/Darker117/wayfarer-layla/releases/tag/v1.4.0) and extract it on your PC. It contains the companion's local browser page, gateway and Windows launcher. The separate **wayfarer-1.4.0.zip** is imported into Layla on your phone.
+Download **wayfarer-pc-companion-1.4.1.zip** from [Wayfarer's GitHub releases](https://github.com/Darker117/wayfarer-layla/releases/tag/v1.4.1) and extract it on your PC. It contains the companion's local browser page, gateway and Windows launcher. The separate **wayfarer-1.4.1.zip** is imported into Layla on your phone.
 
 Requirements:
 
@@ -63,9 +63,9 @@ Phone Tailscale membership, WebView HTTPS/CORS, file picking, playback and Layla
 
 ## Storage, privacy and recovery
 
-- Video preferences, the pairing credential and pending submission identity live in device-local browser storage, separate from the narrative database. They are intentionally excluded from Wayfarer story backups. Restoring an adventure creates a new ID and does not inherit video authority or uploaded images.
+- Video preferences, submitted scene text and timeline positions, the pairing credential and pending submission identity live in device-local browser storage, separate from the narrative database. They are intentionally excluded from Wayfarer story backups. Restoring an adventure creates a new ID and does not inherit video authority or uploaded images.
 - Public context includes final visible narrative and observable Do / Say / Story inputs from completed turns. It excludes Think input, model reasoning, raw script input, card notes/brains, script state and memory. A visible story output can still describe a private event; inspect the prompt and disable context when desired.
-- Desktop job records, reusable connection codes, prompts needed for unfinished segments, uploads and rendered media live in `%LOCALAPPDATA%\WayfarerVideo`. Device tokens are stored as hashes on the desktop. The token on the paired device is a credential: clearing app/browser storage loses it. Local companion state is excluded from source control and release downloads. The final prompt is removed from the gateway record after completion; ComfyUI has its own local history retention.
+- Desktop job records, reusable connection codes, prompts needed for unfinished segments, uploads and rendered media live in `%LOCALAPPDATA%\WayfarerVideo`. Device tokens are stored as hashes on the desktop. The token on the paired device is a credential: clearing app/browser storage loses it. Local companion state is excluded from source control and release downloads. The final enhanced prompt is removed from the gateway record after completion; the original scene text remains on the sending device for the inline video message until that clip is removed; ComfyUI has its own local history retention.
 - Video/image blobs never enter the main library or its JSON backup. Download clips separately. The gateway retains generated segment files for recovery; **Remove clip** deletes its gateway files. ComfyUI's own input/output copies remain under its normal retention policy.
 - Closing the panel or returning to the adventure list does not cancel desktop work. Reopening fetches owned jobs. A lost submission reply is retried with the same ID, avoiding a second render. Cancellation before a delayed submission records an ownership-scoped tombstone so that late request cannot start work.
 - A gateway restart resumes a known submitted prompt or the next unsubmitted segment. An ambiguous interruption during MCP submission stops with an error instead of risking a duplicate. Check the owned desktop queue before retrying that case.

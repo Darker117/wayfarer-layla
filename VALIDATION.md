@@ -1,5 +1,13 @@
 # Validation
 
+## Version 1.4.1 — Inline story videos
+
+- Video is a selected composer mode. Send and Ctrl/Cmd+Enter submit the draft with saved video parameters; selecting the mode never generates or opens settings. Empty Video input cannot continue the narrative. Accepted submissions clear the draft, while failed submissions preserve it.
+- Video progress and playback appear between AI passages. Original video prompts and ordering are saved on the sending device, independently of narrative turns and scripts. Reopening an adventure recovers owned clips and their positions. Offscreen video buffers are released to bound mobile memory usage.
+- Video settings stays at the bottom left. Adventure videos provides direct playback, save/share, cancellation, recovery and deletion, with the same operations available inline.
+- All **74 core tests** and **37 browser checks** pass, plus TypeScript and production packaging. Browser checks exercise a real synthetic MP4, verify playback time advances, and cover the native save-file request through a simulated Layla bridge. They also cover all enhancement/AI-length combinations, uploaded images and chosen parameters, inline errors and lost-reply recovery, chronological placement, reopen, deletion, and 320/390/1440 px layouts.
+- No new GPU render or phone interaction was performed for this UI update. Existing PC Companion 1.4.0 remains compatible; its 1.4.1 download only updates usage documentation. The earlier native playback/save/share checks remain user testing tasks.
+
 ## Version 1.4.0 — Local video and PC Companion
 
 - The PC Companion manages persistent, reusable connection codes with 10/20/30-minute or Forever validity. Forever is the default. Gateway checks cover reuse, persistence across restarts, expiry for new pairings, deletion revoking linked device credentials, and local-only code management. Browser checks cover code creation, reload, deletion and layouts at 320/390/960 px. The companion has a separate Windows download and launcher.
