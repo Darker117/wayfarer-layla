@@ -69,3 +69,7 @@ h1,h2,h3{font-family:inherit;font-weight:650;color:#f2f3f5}h1{font-size:30px;lin
 
 /* Inline video messages keep a stable frame while the desktop renders. */
 .video-response{min-width:0}.video-response .player-action p{white-space:pre-wrap;overflow-wrap:anywhere}.video-clip-heading{flex-wrap:wrap}.video-clip-heading strong{font-size:13px}.video-screen{aspect-ratio:16/9;background:#191c21;border-radius:13px;overflow:hidden;margin:16px 0}.video-screen video{margin:0;height:100%;object-fit:contain}.video-placeholder{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#a7c9e9;font-size:12px}.video-clip .toolbar{margin-top:14px;gap:10px}.video-preparing .player-action{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}.video-preparing .player-action p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.video-clips .video-response{margin-top:24px}.video-clips .player-action{margin-bottom:0}
+
+.video-story-clip .video-screen{margin:0}.video-story-clip video{display:block;width:100%;height:100%;object-fit:contain}.video-story-clip progress{width:100%;accent-color:var(--accent)}
+
+.story-narration>.video-response{margin:0 0 22px;padding:0;border:0}

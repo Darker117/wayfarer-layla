@@ -1,5 +1,11 @@
 # Validation
 
+## Version 1.4.2 — Video before narration
+
+- The story view shows the video player above its associated AI-written narration. New requests preserve the narration ID on the device; existing clips use the passage available at their submission time. Opening-only adventures place videos above their opening text. Undoing a linked passage preserves access to the video without restoring the removed narrative.
+- Save/download, share, delete, cancel and retry controls are confined to **Video settings → Adventure videos**. Story players omit management cards and toolbars, request no native download button, and suppress the browser video context menu. Playback controls remain available.
+- All **40 browser checks** pass, including actual fixture playback, video-before-narration ordering after continuation and resume, older clips, opening-only adventures, Undo, native save messaging in settings, deletion and 320/390/1440 px layouts. TypeScript and production packaging pass. No model, gateway, phone or story database changes were required.
+
 ## Version 1.4.1 — Inline story videos
 
 - Video is a selected composer mode. Send and Ctrl/Cmd+Enter submit the draft with saved video parameters; selecting the mode never generates or opens settings. Empty Video input cannot continue the narrative. Accepted submissions clear the draft, while failed submissions preserve it.

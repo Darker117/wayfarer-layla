@@ -4,7 +4,7 @@ import type { Adventure } from './domain';
 import { uid } from './domain';
 import { Field, Modal } from './ui';
 import { VideoClip } from './VideoClip';
-import { connectionUrl, prepareVideoPrompt, validateVideoDuration, readVideoConnection, readVideoPreferences, saveVideoConnection, saveVideoPreferences, videoPrompt, videoRequest, type VideoConnection, type VideoJob, type VideoPreferences } from './video';
+import { connectionUrl, prepareVideoPrompt, publicVideoText, validateVideoDuration, readVideoConnection, readVideoPreferences, saveVideoConnection, saveVideoPreferences, videoPrompt, videoRequest, type VideoConnection, type VideoJob, type VideoPreferences } from './video';
 
 export function useVideo(adventure: Adventure, draft: string, storyBusy: boolean, onSubmitted: (input: string) => void) {
   const [open,setOpen] = useState(false), [prefs,setPrefs] = useState(() => readVideoPreferences(adventure.id));
@@ -14,11 +14,14 @@ export function useVideo(adventure: Adventure, draft: string, storyBusy: boolean
   const [gatewayUrl,setGatewayUrl] = useState(connection?.url || ''), [code,setCode] = useState('');
   const [preparingInput, setPreparingInput] = useState('');
   const messagesKey = 'wayfarer-video-messages:' + adventure.id;
-  const [messages, setMessages] = useState<Record<string, { input: string; createdAt: number }>>(() => {
+  const [messages, setMessages] = useState<Record<string, { input: string; createdAt: number; turnId?: string | null }>>(() => {
     try { const value = JSON.parse(localStorage.getItem(messagesKey) || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; } catch { return {}; }
   });
+  function narrationTurnId(before = Infinity) {
+    return adventure.turns.filter(turn => turn.createdAt <= before && !turn.stopped && publicVideoText(turn.output) && !/^\s*>>>/.test(turn.output)).at(-1)?.id ?? null;
+  }
   function remember(id: string, input: string, createdAt: number) {
-    const next = { ...messages, [id]: { input, createdAt } };
+    const next = { ...messages, [id]: { input, createdAt, turnId: narrationTurnId() } };
     localStorage.setItem(messagesKey, JSON.stringify(next)); setMessages(next);
   }
   const lock = useRef(false), abort = useRef<AbortController | null>(null), alive = useRef(true), cancelled = useRef(false);
@@ -154,9 +157,16 @@ export function useVideo(adventure: Adventure, draft: string, storyBusy: boolean
     disabled: !!phase || uploading || (storyBusy && (prefs.enhance || prefs.durationMode === 'ai')),
     summary: `${prefs.resolution} · ${prefs.durationMode === 'ai' ? 'AI length' : prefs.duration + 's'}${prefs.enhance ? ' · AI enhanced' : ''}`,
     responses: connection ? jobs.map(job => ({ id: 'video-' + job.id, createdAt: messages[job.id]?.createdAt ?? job.createdAt,
-      content: <VideoClip key={'video-' + job.id} job={job} input={messages[job.id]?.input} connection={connection} onAction={clipAction} suspended={open}/> })) : [],
+      // Legacy clips attach to the narration that existed when they were requested.
+      // A removed/undone turn keeps its clips available as standalone story entries.
+      turnId: messages[job.id]?.turnId === undefined ? narrationTurnId(messages[job.id]?.createdAt ?? job.createdAt) : messages[job.id].turnId,
+      content: <VideoClip view="story" key={'video-' + job.id} job={job} input={messages[job.id]?.input} connection={connection} onAction={clipAction} suspended={open}/> })).sort((a,b) => a.createdAt - b.createdAt) : [],
     settingsButton: <button type="button" aria-label="Video settings and clips" onClick={() => setOpen(true)}><Settings2 size={13}/>{phase ? 'Preparing video…' : active ? 'Video in progress' : 'Video settings'}</button>,
-    notices: !open && notices,
+    notices: !open && <>
+      {phase && <div className="writing-status" role="status"><span className="pulse-dot"/>{phase}</div>}
+      {pending && !phase && <p className="notice">A previous video submission needs recovery. Open Video settings to manage it.</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+    </>,
     panel: open && <Modal title="Video settings" wide onClose={() => setOpen(false)}><div className="form-body video-studio">
       <div className="video-intro"><span className="video-emblem"><Film size={25}/></span><div><span className="eyebrow">Your story, in motion</span><p>Select Video in the composer, write your scene, and press Send. Your video appears in the story while you keep exploring.</p></div></div>
       {notices}
@@ -170,7 +180,7 @@ export function useVideo(adventure: Adventure, draft: string, storyBusy: boolean
       <p className="subtle">16:9 · audio included. Longer clips and 720p need more time and memory; generation time varies. Segment joins may be visible or audible.</p>
       <details><summary>{preview ? 'Prompt sent / being prepared' : 'Preview current video prompt'}</summary><pre className="inspect video-prompt">{preview || currentPreview}</pre><p className="subtle">Edit the composer text or video settings before pressing Send in Video mode.</p></details>
       <details open={!connection}><summary>Desktop connection</summary><p className="subtle">Start Wayfarer PC Companion on your PC, then create a connection code. Use your private Tailscale HTTPS address when connecting from your phone.</p><Field label="Gateway address"><input type="url" value={gatewayUrl} placeholder="https://your-desktop.your-tailnet.ts.net" onChange={e=>setGatewayUrl(e.target.value)}/></Field><Field label="Pairing code"><input type="password" autoComplete="off" value={code} onChange={e=>setCode(e.target.value)}/></Field><div className="toolbar"><button className="button" onClick={()=>void pair()}>Pair desktop</button>{connection && <><button className="button" onClick={()=>void action(async()=>{await videoRequest(connection,'/health');setConnectionStatus('Connected · local video gateway');})}>Test connection</button><button className="text-button" onClick={()=>void action(async()=>{if(pendingRef.current || lock.current || active)throw new Error('Finish or cancel pending clips before disconnecting.');await videoRequest(connection,'/connection',{method:'DELETE'});saveVideoConnection(null);setConnection(null);setJobs([]);setConnectionStatus('Disconnected');})}>Disconnect</button></>}</div><p className="subtle" role="status">{connectionStatus}</p></details>
-      <section className="video-clips"><h3>Adventure videos</h3><p className="subtle">View, save, share, or delete videos from this adventure. Clips also appear alongside the story.</p>{!jobs.length && <p className="subtle">Your videos will appear here. Closing settings does not stop a render.</p>}{connection && jobs.map(job => <VideoClip key={job.id} job={job} input={messages[job.id]?.input} connection={connection} onAction={clipAction}/>)}</section>
+      <section className="video-clips"><h3>Adventure videos</h3><p className="subtle">View, save, share, or delete videos from this adventure. Clips also appear alongside the story.</p>{!jobs.length && <p className="subtle">Your videos will appear here. Closing settings does not stop a render.</p>}{connection && jobs.map(job => <VideoClip view="manager" key={job.id} job={job} input={messages[job.id]?.input} connection={connection} onAction={clipAction}/>)}</section>
     </div></Modal>,
   };
 }
