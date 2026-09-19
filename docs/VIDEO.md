@@ -1,80 +1,73 @@
-# Local video in Wayfarer 1.4
+# Direct ComfyUI video in Wayfarer 1.5
 
-## Make a clip
+## Connect your PC
 
-1. Open **Video settings** at the bottom left of the composer to pair your desktop and choose options. **Adventure videos** in these settings lets you view, save, share, cancel or delete clips.
-2. Select **Video**, beside Do / Say / Think / Story. It selects the input mode without opening settings or starting a render.
-3. Write your scene, then press **Send** (the up-arrow), or Ctrl/Cmd+Enter. Wayfarer uses your saved video options and clears the draft once the desktop accepts it. An empty Video input cannot continue the story.
-4. The video appears directly above the latest completed AI narration (or the opening passage if there are no turns). The story player has playback controls only. Save/download, share, cancel, retry and delete actions are in **Video settings → Adventure videos**. You can continue writing while ComfyUI renders; reopening the adventure recovers the clips and their positions.
+Wayfarer calls ComfyUI directly. There is no companion app, MCP service, pairing code, or separate video gateway to run.
 
-**Enhance with AI** is optional and defaults on. **AI chooses length** is independent: it can choose seconds without rewriting the prompt. If either option is on, Wayfarer makes one separate Layla model call with a structured result. With both off, the scene goes to the gateway with no Layla call, so a normal desktop browser can generate video too. Narrative scripts never run for video. Story generation waits while video uses Layla; after preparation, video rendering does not lock the story controls.
+1. Use your existing ComfyUI installation with the working Hermes FastH3 models and nodes. This release keeps that eight-step INT8 workflow; it does not switch models.
+2. Add these arguments to your ComfyUI launch options, including in Stability Matrix if that is your launcher:
 
-Options are saved per adventure on the current device: 480p / 720p, manual whole seconds from **1 to 225** (3:45), AI length selection, style, optional image, and context from the last 1 / 3 / 6 completed public turns. Context can be disabled. An image provides appearance guidance; without it, the first segment is true text-to-video. Subsequent segments use the preceding final frame.
+   ```text
+   --listen 127.0.0.1 --port 8188 --enable-cors-header null --cache-none
+   ```
 
-## Longer videos
+   `null` permits Layla's local-file WebView origin. `--cache-none` releases intermediate node results instead of keeping every segment's decoded frames in memory. Long-video submission checks for this or ComfyUI's RAM-pressure cache option. Keep your normal model paths and GPU options.
+3. For a browser on that same PC, enter **http://127.0.0.1:8188** under **Video settings → PC connection → ComfyUI address**, then **Connect to ComfyUI**. For browser testing, use its origin instead of `null` as the CORS argument (for example `http://127.0.0.1:5173`).
+4. For a phone, use the private HTTPS address described below. The phone's `127.0.0.1` refers to the phone, not the PC.
 
-The gateway divides videos longer than 15 seconds into balanced segments of at most 15 seconds. For example, 16 seconds becomes two 8-second generations; 225 seconds becomes fifteen 15-second generations. Each segment is newly generated, with a last-frame image passed to the next one. No looping, slowing, duplicated clips or silent shortening is used. Joins can have visible changes or audible seams; this is not a guarantee of continuous action or perfect identity preservation over 3:45.
+ComfyUI **0.36.0** was used for native verification. The client checks for the required video, H3, and SageAttention nodes and exact model filenames before generation. It needs current native `Video Slice`, `ConcatenateVideo`, `GetVideoComponents`, dynamic SaveVideo options, caller-supplied UUID prompt IDs, and job-scoped cancellation. Older ComfyUI versions may need updating.
 
-H3 uses a `17k+5` frame grid at 24 fps. Segments generate 124–362 frames and are trimmed to the requested length. Tiny 1–4 second requests generate a 5-second source and trim it. The final output is H.264 MP4 with AAC audio and a 16:9 display aspect. 480p uses 864×480 generation, cropped to 852×480 with a 640:639 pixel aspect; 720p uses 1280×736 generation, cropped to 1280×720. Uploaded images are cover-cropped before H3 conditioning so they are not stretched.
+### Phone access away from home
 
-Rendering time depends on hardware, cache state and clip length. A 225-second request performs fifteen separate generations. No long-clip speed or quality benchmark is implied by support for that duration.
-
-## Start the PC Companion
-
-Download **wayfarer-pc-companion-1.4.2.zip** from [Wayfarer's GitHub releases](https://github.com/Darker117/wayfarer-layla/releases/tag/v1.4.2) and extract it on your PC. It contains the companion's local browser page, gateway and Windows launcher. The separate **wayfarer-1.4.2.zip** is imported into Layla on your phone.
-
-Requirements:
-
-- Node.js 22 or newer (verified with Node 24).
-- The existing local ComfyUI running on `127.0.0.1:8188`.
-- Python environment containing `comfy-mcp`, its MCP SDK and `comfy-cli`. The Windows default is `%LOCALAPPDATA%\comfy-mcp-tools\Scripts\python.exe`; override with `WAYFARER_MCP_PYTHON` if needed.
-- `ffmpeg` and `ffprobe` in PATH; optional overrides `WAYFARER_FFMPEG` and `WAYFARER_FFPROBE`.
-- The approved Hermes graph's local weights and nodes: FastH3 eight-step INT8 convrot, Qwen3VL NVFP4, MiniMax H3 video/audio VAEs and the native SageAttention patch. The graph is `gateway/fasth3.json`. It contains model basenames, not model files or credentials. It is the working Hermes configuration, not the original Spectrum workflow.
-
-On Windows, run **Start-Wayfarer-PC-Companion.cmd** from the extracted download (or `gateway/Start-Wayfarer-PC-Companion.cmd` in source). It starts the gateway hidden and opens the companion page, without starting, restarting or changing ComfyUI. Logs and a process ID go into `%LOCALAPPDATA%\WayfarerVideo`. For a foreground terminal, run `node gateway/server.mjs` from the project root; Ctrl+C stops that gateway only.
-
-Open **http://127.0.0.1:8788** on the desktop. Choose **10, 20 or 30 minutes**, or **Forever** (the default), then select **Create code**. Codes are reusable and survive companion restarts. Their duration controls new pairings; devices already connected can finish videos after a timed code expires. **Delete** removes a code and revokes every connection established through it. Existing connections made before this code-management update remain valid until disconnected.
-
-In Wayfarer’s Video settings, enter the gateway address and code, then choose **Pair desktop** and **Test connection**. Codes and tokens are never printed to terminal logs. Saved reusable codes live in the companion's local state so the desktop page can show and copy them later.
-
-For a desktop browser on the same PC, use `http://127.0.0.1:8787`. Pairing grants that device access only to its own adventures' jobs. **Disconnect** revokes its token. Do not disconnect while clips or a pending submission need recovery; another pairing creates a different ownership identity.
-
-## Private phone access from elsewhere
-
-Use Tailscale on the PC and phone, signed into an authorized tailnet. The PC must stay powered on, connected, and running ComfyUI and the gateway. Review your tailnet access policy to restrict the PC service to intended devices/users.
-
-Inspect existing configuration first:
+Run Tailscale on your PC and phone in the same authorized tailnet. The PC must stay awake, online, and running ComfyUI. Inspect existing routes before changing them:
 
 ```powershell
 tailscale serve status --json
 ```
 
-With no conflicting route, publish **only the authenticated API port** inside the tailnet:
+If this HTTPS route is unused, or was dedicated to the old Wayfarer gateway, point it directly to ComfyUI:
 
 ```powershell
-tailscale serve --bg --yes http://127.0.0.1:8787
+tailscale serve --bg --yes http://127.0.0.1:8188
 ```
 
-Use the HTTPS address printed by Tailscale in Wayfarer. Do not forward pairing port 8788 or ComfyUI port 8188. Do not use public Funnel. Do not reset unrelated Serve configuration. To remove just this HTTPS proxy later, use `tailscale serve --https=443 off` after checking it still belongs to Wayfarer.
+Enter the printed HTTPS address in Wayfarer. Preserve unrelated Serve routes. Use private Serve, not public Funnel or router port forwarding: ComfyUI has no Wayfarer pairing/authentication layer, and access to this address permits ComfyUI operations. Restrict the route to your intended devices/users through Tailscale access rules.
 
-The gateway permits opaque WebView origins (`null`) and the local development origins by default. Other exact origins can be configured with comma-separated `WAYFARER_ORIGINS`; restart the gateway after changing it. It never enables wildcard CORS. Pairing and bearer authorization still apply to allowed origins.
+A private LAN or Tailscale HTTP address is also accepted if your ComfyUI is already listening on that interface and your WebView permits it. HTTPS is the recommended phone route. A failed CORS/network request leaves the draft intact.
 
-Phone Tailscale membership, WebView HTTPS/CORS, file picking, playback and Layla save/share require device verification. The desktop and browser checks do not establish these phone behaviors; see the validation notes for the results recorded so far.
+## Make and manage a clip
 
-## Storage, privacy and recovery
+1. Open **Video settings** at the bottom left to connect and choose options.
+2. Select **Video** beside Do / Say / Think / Story. Selecting it does not open settings or render anything.
+3. Write the scene in the composer and press **Send**, or Ctrl/Cmd+Enter. The draft clears after ComfyUI accepts it. Empty Video input cannot continue the story.
+4. The video appears above the latest completed AI-written narration, or above the opening if there are no turns. The story contains the player and narration; save/share/remove/cancel controls stay in **Video settings → Adventure videos**.
 
-- Video preferences, submitted scene text and narration associations, the pairing credential and pending submission identity live in device-local browser storage, separate from the narrative database. They are intentionally excluded from Wayfarer story backups. Restoring an adventure creates a new ID and does not inherit video authority or uploaded images.
-- Public context includes final visible narrative and observable Do / Say / Story inputs from completed turns. It excludes Think input, model reasoning, raw script input, card notes/brains, script state and memory. A visible story output can still describe a private event; inspect the prompt and disable context when desired.
-- Desktop job records, reusable connection codes, prompts needed for unfinished segments, uploads and rendered media live in `%LOCALAPPDATA%\WayfarerVideo`. Device tokens are stored as hashes on the desktop. The token on the paired device is a credential: clearing app/browser storage loses it. Local companion state is excluded from source control and release downloads. The final enhanced prompt is removed from the gateway record after completion; the original scene text remains on the sending device in the video manager until that clip is removed; ComfyUI has its own local history retention.
-- Video/image blobs never enter the main library or its JSON backup. Download clips separately. The gateway retains generated segment files for recovery; **Remove clip** deletes its gateway files. ComfyUI's own input/output copies remain under its normal retention policy.
-- Closing the panel or returning to the adventure list does not cancel desktop work. Reopening fetches owned jobs. A lost submission reply is retried with the same ID, avoiding a second render. Cancellation before a delayed submission records an ownership-scoped tombstone so that late request cannot start work.
-- A gateway restart resumes a known submitted prompt or the next unsubmitted segment. An ambiguous interruption during MCP submission stops with an error instead of risking a duplicate. Check the owned desktop queue before retrying that case.
-- Cancel targets exactly the active owned Comfy prompt and any gateway encoder. It prevents later segments. The service does not call global interrupt, clear other queues, restart ComfyUI, unload others' models, or expose arbitrary workflows, MCP commands or file paths.
+**Enhance with AI** is optional. **AI-chosen length** works independently. When either is enabled, Layla makes one planning call; otherwise Wayfarer sends the entered scene with the chosen style/context directly. Narrative scripts do not run for video. Normal story generation remains available once video planning finishes.
 
-Bounds: 10 MB PNG/JPEG/WebP uploads, at most 24 megapixels, 30 retained uploads per paired device, two active videos globally, 200 retained job records, and 512 MB per source segment. Mobile preview/download is limited to 128 MB and native Layla save to 64 MB to avoid large base64 allocations. Larger finished clips remain in the desktop output directory. All limits produce explicit errors.
+Options are saved per adventure on this device:
+
+- 480p or 720p; widescreen presentation with audio.
+- Manual whole seconds from **1 to 225** (3 minutes 45 seconds), or AI-chosen duration.
+- Optional style, independent of any image-generator style setting.
+- Optional public context from the last **1, 3, or 6** completed turns. Private Think input, model reasoning, cards, memory and script internals are excluded.
+- Optional PNG/JPEG/WebP starting image up to 10 MB. Without one, the first segment uses text-to-video. Images belong to the selected PC; upload again after changing servers. Removing image guidance does not delete the PC's uploaded file.
+
+Playback uses ComfyUI's native `/view` file response and range requests. Only visible players are mounted, so long videos are not fully buffered into JavaScript memory. Saving/sharing downloads a copy when requested; Layla's save bridge supports files up to 64 MB in this app. Save larger files directly from the PC's `ComfyUI/output/wayfarer` folder.
+
+**Remove clip** clears its Wayfarer entry and its ComfyUI history record. The MP4 remains on the PC: ComfyUI's standard API has no output-file deletion endpoint. Delete that file through your PC's file manager when you no longer need it.
+
+## Long clips and recovery
+
+A single ComfyUI workflow generates balanced segments of at most 15 seconds, encodes each segment, and passes its final frame as guidance for the next. Native video nodes join the encoded segments and save one MP4. ComfyUI continues executing the accepted workflow if Layla closes. No companion or phone background process is needed.
+
+H3 generates on its `17k+5` frame grid at 24 fps; native video nodes trim to the requested whole seconds. Tiny requests generate a five-second source and trim it. 480p renders at 864×480 and crops to conventional widescreen **854×480** square-pixel output; 720p renders at 1280×736 and crops to **1280×720**. Final video is H.264 with AAC audio. Segment joins can be visible or audible. A 225-second clip requires fifteen model generations, not one short generation stretched or looped.
+
+Wayfarer saves the request UUID before submitting and recovers it using ComfyUI queue/history. ComfyUI does not deduplicate repeated submissions, so recovery **never POSTs the same render again**. If neither queue nor history contains it, inspect ComfyUI before using **Clear unconfirmed record**. Clearing tracking does not cancel a request that arrives later.
+
+Cancellation targets the exact request ID; Wayfarer never calls the global interrupt or clears another application's queue. A failed render is shown with its error. There is no segment-resume or retry-export action in direct mode. After a ComfyUI restart, unfinished jobs may be lost; history also belongs to ComfyUI's current session. Completed clips with already-saved file metadata remain playable as long as their output file remains present.
+
+Connections, clip records, prompt associations and video options are device-local, separate from the story database and story backups. Keep the same URL to recover the same local clip list. Existing 1.4 companion state and files are preserved, but do not automatically appear in the new direct connection. Story saves and cards are unchanged. Source under `gateway/` is legacy only and is not included in the 1.5 mini-app package.
 
 ## Verification
 
-Run `npm test`, `npm run test:gateway`, `npm run test:ui`, and `npm run build`. The browser suite uses a mock native bridge and gateway; desktop gateway tests exercise real HTTP, authorization, scoped cancellation and persistence. `tools/video-smoke.mjs` explicitly queues a neutral real local generation; do not run it as a routine unit test.
-
-See [validation notes](../VALIDATION.md) for actual media verification and remaining device checks.
+See [Validation](../VALIDATION.md). `npm test` covers native graph construction, exact 1–225-second allocation, scoped cancellation, direct submission, lost-response recovery and file ownership. Browser tests cover the actual composer/settings flow and fixture playback. With ComfyUI running and its queue idle, `npm run test:comfy-direct` exercises a synthetic 225-second native workflow without model calls. `node tools/test-direct-comfy.mjs --render` explicitly runs a neutral five-second production-model smoke. Full 225-second AI generation speed and continuity are not benchmarked.

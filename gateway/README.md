@@ -1,3 +1,5 @@
+> **Legacy (Wayfarer 1.4.x only).** Wayfarer 1.5 connects directly to ComfyUI. This source is retained for existing installations and is no longer packaged or required. See [current setup](../docs/VIDEO.md).
+
 # Wayfarer PC Companion
 
 Generate videos on your PC from the Wayfarer mini-app in Layla. This Windows companion connects the phone to your existing ComfyUI setup and manages reusable connection codes.

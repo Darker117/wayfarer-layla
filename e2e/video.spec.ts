@@ -7,28 +7,34 @@ async function setup(page: Page, enhance=false, auto=false, lost=false, openingO
   a.id='video-adventure'; a.turns=[{id:'turn',mode:'think',input:'PRIVATE THOUGHT',scriptInput:'PRIVATE SCRIPT',output:'A silver bird flies over the lake.',before:snapshot(a),logs:['PRIVATE LOG'],contextCards:[],createdAt:1}];if(openingOnly)a.turns=[];store.adventures.push(a);
   await page.addInitScript(({store,enhance,auto})=>{
     const w=window as any;w.nativeStore=store;w.chatCalls=0;w.savedFiles=[];
-    localStorage.setItem('wayfarer-video-v1:connection',JSON.stringify({url:'http://127.0.0.1:8787',token:'test-device-token-never-exported'}));
+    localStorage.setItem('wayfarer-comfy-connection-v1',JSON.stringify({url:'http://127.0.0.1:8188'}));
     localStorage.setItem('wayfarer-video-v1:video-adventure',JSON.stringify({turns:1,context:true,resolution:'480p',duration:30,durationMode:auto?'ai':'manual',enhance,style:'Soft light'}));
     const send=(id:string,event:string,data:unknown)=>window.dispatchEvent(new MessageEvent('message',{data:JSON.stringify({id,event,data})}));
     w.ReactNativeWebView={postMessage(raw:string){const r=JSON.parse(raw);if(r.cmd.startsWith('send_message')){w.chatCalls++;w.lastChat=r.data;setTimeout(()=>{const msg=w.chatReply || '<think>PRIVATE MODEL REASONING</think>'+JSON.stringify({prompt:'An enhanced boat crosses the silver lake.',duration:23});send(r.id,'on_message',{msg,delta:msg});send(r.id,'on_message_end',{msg});},100);return;}if(r.cmd==='save_file'){w.savedFiles.push(r.data);queueMicrotask(()=>send(r.id,'on_save_file_response',{success:true}));return;}if(r.cmd==='get_execution_context')queueMicrotask(()=>send(r.id,'on_get_execution_context_response',{app_version:'7.4.0',character:null,session_id:null}));if(r.cmd==='execute_sql'){if(r.data.query.startsWith('INSERT'))w.nativeStore=JSON.parse(r.data.params[0]);queueMicrotask(()=>send(r.id,'on_execute_sql_response',{rows:r.data.query.startsWith('SELECT')?[{payload:JSON.stringify(w.nativeStore)}]:[],rowsAffected:1,insertId:1}));}}};
   },{store,enhance,auto});
   const submitted:any[]=[],jobs:any[]=[];let dropped=false;
-  await page.route('http://127.0.0.1:8787/**',async route=>{
+  await page.route('http://127.0.0.1:8188/**',async route=>{
     const req=route.request(),url=new URL(req.url()),path=url.pathname;
     const respond=(data:unknown,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
     if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*'}});
-    if(path==='/health')return respond({ok:true});
-    if(path==='/uploads')return respond({id:'uploaded-start'});
-    if(path.startsWith('/uploads/'))return respond({removed:true});
-    if(path==='/jobs' && req.method()==='POST'){
-      const body=req.postDataJSON();submitted.push(body);
+    if(path==='/system_stats')return respond({system:{comfyui_version:'0.36.0',argv:['--cache-none']}});
+    if(path==='/object_info')return respond(Object.fromEntries(['UNETLoader','MiniMaxH3MemoryEfficientSageAttentionPatch','MiniMaxH3SigmaShift','CLIPLoader','VAELoader','MiniMaxH3ImageToVideo','EmptyMiniMaxH3LatentAV','SamplerCustomAdvanced','VAEDecodeAudio','CreateVideo','Video Slice','ConcatenateVideo','GetVideoComponents','SaveVideo','ImageCrop'].map(name=>[name,{}])));
+    if(path==='/upload/image')return respond({name:'uploaded-start.png',subfolder:'wayfarer',type:'input'});
+    if(path==='/prompt' && req.method()==='POST'){
+      const request=req.postDataJSON(),graph=request.prompt;
+      const body={id:request.prompt_id,prompt:graph.part0_condition.inputs.prompt,duration:Object.entries(graph).filter(([key])=>/^part\d+_trim$/.test(key)).reduce((sum,[,value]:any)=>sum+value.inputs.duration,0),resolution:graph.part0_crop.inputs.height===720?'720p':'480p',imageId:graph.start?.inputs.image,graph};
+      submitted.push(body);
       let job=jobs.find(j=>j.id===body.id);if(!job){job={...body,state:'queued',message:'Queued on your desktop',createdAt:Date.now(),updatedAt:Date.now()};jobs.push(job);}
-      if(lost&&!dropped){dropped=true;return route.abort('failed');}return respond(job,202);
+      if(lost&&!dropped){dropped=true;return route.abort('failed');}return respond({prompt_id:body.id,number:0,node_errors:{}});
     }
-    if(path==='/jobs')return respond(jobs);
-    if(path.endsWith('/video'))return route.fulfill({contentType:'video/mp4',path:'e2e/fixtures/video.mp4'});
-    if(path.startsWith('/jobs/') && req.method()==='DELETE'){const index=jobs.findIndex(j=>path==='/jobs/'+j.id);if(index>=0)jobs.splice(index,1);return respond({removed:true});}
-    if(path.endsWith('/cancel')){const job=jobs.find(j=>path.includes(j.id));if(job){job.state='cancelled';job.message='Cancelled';}return respond(job||{});}
+    if(path==='/queue')return respond({queue_running:jobs.filter(j=>j.state==='sampling').map(j=>[0,j.id]),queue_pending:jobs.filter(j=>j.state==='queued').map(j=>[0,j.id])});
+    if(path.startsWith('/history/')){
+      const job=jobs.find(j=>path==='/history/'+j.id);
+      return respond(job?.state==='completed'?{[job.id]:{status:{completed:true,status_str:'success'},outputs:{save:{images:[{filename:job.id+'_00001_.mp4',subfolder:'wayfarer',type:'output'}]}}}}:{});
+    }
+    if(path==='/view')return route.fulfill({contentType:'video/mp4',path:'e2e/fixtures/video.mp4'});
+    if(path==='/history' && req.method()==='POST'){const ids=req.postDataJSON().delete;for(let i=jobs.length-1;i>=0;i--)if(ids.includes(jobs[i].id))jobs.splice(i,1);return respond({});}
+    if(path.endsWith('/cancel')){const job=jobs.find(j=>path.includes(j.id));if(job){job.state='cancelled';job.message='Cancelled';}return respond({cancelled:!!job});}
     return respond({},404);
   });
   await page.goto('/');await page.getByRole('button',{name:new RegExp('The Lantern Hollow.*'+a.turns.length+' turns into your story')}).click();
@@ -86,7 +92,7 @@ test('uploaded image, chosen parameters and inline errors survive closing settin
   await expect(page.getByText('boat.png',{exact:true})).toBeVisible();await page.getByLabel('Duration in seconds',{exact:false}).fill('60');
   await page.getByRole('combobox',{name:'Resolution',exact:true}).selectOption('720p');
   await page.getByRole('button',{name:'Close dialog'}).click();await sendVideo(page,'A sailing boat');
-  await expect.poll(()=>submitted.length).toBe(1);expect(submitted[0].imageId).toBe('uploaded-start');expect(submitted[0].duration).toBe(60);expect(submitted[0].resolution).toBe('720p');
+  await expect.poll(()=>submitted.length).toBe(1);expect(submitted[0].imageId).toBe('wayfarer/uploaded-start.png');expect(submitted[0].duration).toBe(60);expect(submitted[0].resolution).toBe('720p');
   await expect(page.locator('.story-column .video-response').getByRole('button')).toHaveCount(0);
   await page.getByRole('button',{name:'Video settings and clips'}).click();
   await page.getByRole('dialog').getByRole('button',{name:'Cancel clip'}).click();await expect(page.getByRole('dialog').getByText('cancelled',{exact:true})).toBeVisible();
@@ -96,9 +102,9 @@ test('uploaded image, chosen parameters and inline errors survive closing settin
   await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByLabel('Your action')).toHaveValue('A second boat');
 });
 
-test('unpaired Video keeps the draft and shows guidance inline',async({page})=>{
+test('disconnected Video keeps the draft and shows guidance inline',async({page})=>{
   await setup(page);
-  await page.evaluate(()=>localStorage.removeItem('wayfarer-video-v1:connection'));
+  await page.evaluate(()=>localStorage.removeItem('wayfarer-comfy-connection-v1'));
   await page.getByRole('button',{name:'Back to adventures'}).click();
   await page.getByRole('button',{name:'Resume The Lantern Hollow',exact:true}).click();
   await sendVideo(page,'A quiet lake');
@@ -106,6 +112,53 @@ test('unpaired Video keeps the draft and shows guidance inline',async({page})=>{
   await expect(page.getByLabel('Your action')).toHaveValue('A quiet lake');
   await page.getByRole('button',{name:'Video settings and clips'}).click();
   await expect(page.getByRole('dialog',{name:'Video settings',exact:true})).toBeVisible();
+});
+
+test('connects straight to ComfyUI without pairing and preserves legacy settings',async({page})=>{
+  await setup(page);
+  await page.evaluate(()=>{
+    localStorage.removeItem('wayfarer-comfy-connection-v1');
+    localStorage.setItem('wayfarer-video-v1:connection',JSON.stringify({url:'http://127.0.0.1:8787',token:'old-credential-kept-local'}));
+  });
+  await page.getByRole('button',{name:'Back to adventures'}).click();
+  await page.getByRole('button',{name:'Resume The Lantern Hollow',exact:true}).click();
+  const requests:string[]=[];page.on('request',req=>requests.push(req.url()));
+  await page.getByRole('button',{name:'Video settings and clips'}).click();
+  await expect(page.getByLabel('Pairing code')).toHaveCount(0);
+  await page.getByLabel('ComfyUI address').fill('http://127.0.0.1:8188');
+  await page.getByRole('button',{name:'Connect to ComfyUI',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>localStorage.getItem('wayfarer-comfy-connection-v1'))).not.toBeNull();
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('wayfarer-comfy-connection-v1')!));
+  expect(saved).toEqual({url:'http://127.0.0.1:8188'});
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('wayfarer-video-v1:connection')!).token)).toBe('old-credential-kept-local');
+  expect(requests.some(url=>/8787|8788|\/pair/.test(url))).toBe(false);
+  await page.getByText('PC connection',{exact:true}).click();
+  await page.getByLabel('ComfyUI address').scrollIntoViewIfNeeded();
+  await page.screenshot({path:'docs/screenshots/video-connection-390.png'});
+});
+
+test('disconnect preserves an accepted render and reconnect recovers it without resubmitting',async({page})=>{
+  const {jobs,submitted}=await setup(page);
+  await sendVideo(page,'A paper boat');await expect.poll(()=>jobs.length).toBe(1);
+  await page.getByRole('button',{name:'Video settings and clips'}).click();
+  await page.getByText('PC connection',{exact:true}).click();
+  await page.getByRole('button',{name:'Disconnect',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>localStorage.getItem('wayfarer-comfy-connection-v1'))).toBeNull();
+  expect(jobs[0].state).toBe('queued');
+  await page.getByRole('button',{name:'Connect to ComfyUI',exact:true}).click();
+  await expect(page.getByRole('dialog').getByLabel('Video response')).toHaveCount(1);
+  expect(submitted).toHaveLength(1);
+});
+
+test('an accepted job lost after a PC restart can be cleared without silently rendering again',async({page})=>{
+  const {jobs,submitted}=await setup(page);
+  await sendVideo(page,'A paper boat');await expect.poll(()=>jobs.length).toBe(1);
+  jobs.splice(0);
+  await expect(page.locator('.story-column .video-response')).toContainText('Request not found in ComfyUI');
+  await page.getByRole('button',{name:'Video settings and clips'}).click();
+  await page.getByRole('button',{name:'Clear unconfirmed clip',exact:true}).click();
+  await expect(page.getByRole('dialog').getByLabel('Video response')).toContainText('Tracking cleared on this device');
+  expect(submitted).toHaveLength(1);
 });
 
 test('video precedes its narration and all management stays in settings after resume',async({page})=>{
@@ -164,7 +217,10 @@ test('a video requested before any turn appears above the opening narration',asy
 
 test('older clips appear before the narration that existed at submission',async({page})=>{
   const {jobs}=await setup(page);
-  jobs.push({id:'legacy-video',adventureId:'video-adventure',state:'completed',message:'Your video is ready',resolution:'480p',duration:5,createdAt:2,updatedAt:2});
+  await sendVideo(page,'A silver bird');await expect.poll(()=>jobs.length).toBe(1);
+  await page.evaluate(()=>localStorage.removeItem('wayfarer-video-messages:video-adventure'));
+  await page.getByRole('button',{name:'Back to adventures'}).click();
+  await page.getByRole('button',{name:'Resume The Lantern Hollow',exact:true}).click();
   const narration=page.locator('.story-turn > .story-narration').first();
   await expect(narration.locator('> .video-response')).toBeVisible();
   await expect(narration.locator(':scope > :first-child')).toHaveClass(/video-response/);

@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, Film, Share2 } from 'lucide-react';
 import { hasNativeBridge, layla, withTimeout } from './host';
-import { videoRequest, type VideoConnection, type VideoJob } from './video';
+import type { VideoConnection, VideoJob } from './video';
+import { comfyVideoUrl } from './comfy';
 
 /** Video messages share the story timeline, without entering narrator or script history. */
 export function VideoClip({ job, input, connection, onAction, view, suspended = false }: {
   job: VideoJob; input?: string; connection: VideoConnection; suspended?: boolean;
   view: 'story' | 'manager';
-  onAction: (job: VideoJob, action: 'cancel' | 'resume' | 'retry-export' | 'remove') => Promise<void>;
+  onAction: (job: VideoJob, action: 'cancel' | 'remove' | 'forget') => Promise<void>;
 }) {
   const container = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false), [retry, setRetry] = useState(0);
-  const [media, setMedia] = useState<{ blob: Blob; url: string } | null>(null);
+  const [media, setMedia] = useState<{ url: string } | null>(null);
   const [error, setError] = useState(''), [working, setWorking] = useState(false);
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { rootMargin: '240px' });
@@ -20,25 +21,11 @@ export function VideoClip({ job, input, connection, onAction, view, suspended = 
   }, []);
   useEffect(() => {
     if (job.state !== 'completed' || !visible || suspended) return;
-    const controller = new AbortController();
-    let url: string | undefined;
     setError('');
-    void (async () => {
-      try {
-        const response = await videoRequest(connection, `/jobs/${job.id}/video`, {
-          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(120000)]),
-        }, job.adventureId);
-        if (Number(response.headers.get('Content-Length')) > 128 * 1024 * 1024) throw new Error('This clip is too large for mobile playback. Use the desktop output.');
-        const blob = await response.blob();
-        if (blob.size > 128 * 1024 * 1024) throw new Error('This clip is too large for mobile playback. Use the desktop output.');
-        if (controller.signal.aborted) return;
-        url = URL.createObjectURL(blob);
-        setMedia({ blob, url });
-      } catch (err) { if (!controller.signal.aborted) setError((err as Error).message); }
-    })();
-    // Offscreen clips release their buffers; a long adventure must not retain every video in RAM.
-    return () => { controller.abort(); if (url) URL.revokeObjectURL(url); setMedia(null); };
-  }, [job.id, job.adventureId, job.state, connection.url, connection.token, visible, retry, suspended]);
+    try { setMedia({url:comfyVideoUrl(connection,job)}); } catch(err) { setError((err as Error).message); }
+    // Native range requests stream long clips without buffering the whole MP4 in WebView RAM.
+    return () => setMedia(null);
+  }, [job.id, job.adventureId, job.state, connection.url, visible, retry, suspended]);
   async function act(fn: () => Promise<void>) {
     setWorking(true); setError('');
     try { await fn(); } catch (err) { setError((err as Error).message); }
@@ -46,7 +33,13 @@ export function VideoClip({ job, input, connection, onAction, view, suspended = 
   }
   async function save(share = false) {
     if (!media) return;
-    const filename = `wayfarer-${job.id}.mp4`, file = new File([media.blob], filename, { type: 'video/mp4' });
+    const response = await fetch(media.url,{signal:AbortSignal.timeout(120000),credentials:'omit'});
+    if(!response.ok)throw new Error('The video could not be downloaded from ComfyUI.');
+    const limit = hasNativeBridge() ? 64 : 256;
+    if(Number(response.headers.get('Content-Length')) > limit*1024*1024)throw new Error(`Save clips over ${limit} MB from ComfyUI on your PC.`);
+    const blob = await response.blob();
+    if(blob.size > limit*1024*1024)throw new Error(`Save clips over ${limit} MB from ComfyUI on your PC.`);
+    const filename = `wayfarer-${job.id}.mp4`, file = new File([blob], filename, { type: 'video/mp4' });
     if (share && navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'Wayfarer scene' }); return; }
     if (hasNativeBridge()) {
       if (file.size > 64 * 1024 * 1024) throw new Error('Use the desktop output for clips over 64 MB.');
@@ -55,7 +48,7 @@ export function VideoClip({ job, input, connection, onAction, view, suspended = 
       });
       const result = await withTimeout(signal => layla.utils.saveFile(filename, data, true, { signal }), 60000);
       if (!result.success) throw new Error(result.message || 'Layla could not save the clip.');
-    } else { const link = document.createElement('a'); link.href = media.url; link.download = filename; link.click(); }
+    } else { const url=URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = filename; link.click(); setTimeout(()=>URL.revokeObjectURL(url),60000); }
   }
   const terminal = ['completed', 'error', 'cancelled'].includes(job.state);
   const manage = view === 'manager';
@@ -64,7 +57,7 @@ export function VideoClip({ job, input, connection, onAction, view, suspended = 
     <div className={manage ? 'video-clip' : 'video-story-clip'}>
       {manage && <div className="video-clip-heading"><strong>{job.resolution ? `${job.resolution} · ${job.duration}s · 16:9` : 'Video request'}</strong><span className="eyebrow">{job.state}</span></div>}
       {job.state === 'completed' && <div className="video-screen">{media
-        ? <video aria-label="Generated adventure video" controls playsInline preload="metadata" src={media.url} controlsList={manage ? undefined : 'nodownload noremoteplayback'} onContextMenu={manage ? undefined : event => event.preventDefault()}/>
+        ? <video aria-label="Generated adventure video" controls playsInline preload="metadata" src={media.url} onError={()=>{setMedia(null);setError('The video could not be played. Check the PC connection or its ComfyUI output folder.');}} controlsList={manage ? undefined : 'nodownload noremoteplayback'} onContextMenu={manage ? undefined : event => event.preventDefault()}/>
         : <div className="video-placeholder"><Film size={28}/><span role="status">{error ? 'Video is ready on your desktop' : 'Loading your video…'}</span></div>}</div>}
       {(manage || job.state !== 'completed') && <p role="status">{job.message}</p>}
       {!terminal && job.progress && <progress value={job.progress.value} max={job.progress.max} aria-label="Video rendering progress"/>}
@@ -72,7 +65,7 @@ export function VideoClip({ job, input, connection, onAction, view, suspended = 
       {!manage && (error || job.state === 'error') && <p className="subtle">Open Video settings to manage this clip.</p>}
       {manage && <div className="toolbar">
         {!terminal && <button className="button" disabled={working} onClick={() => void act(() => onAction(job, 'cancel'))}>Cancel clip</button>}
-        {job.state === 'error' && <><button className="button" disabled={working} onClick={() => void act(() => onAction(job, 'resume'))}>Resume remaining parts</button><button className="button" disabled={working} onClick={() => void act(() => onAction(job, 'retry-export'))}>Retry export</button></>}
+        {job.state === 'preparing' && <><p className="subtle">Check ComfyUI before clearing this record. Clearing tracking does not cancel a render.</p><button className="text-button" disabled={working} onClick={() => void act(() => onAction(job, 'forget'))}>Clear unconfirmed clip</button></>}
         {job.state === 'completed' && !media && error && <button className="button" onClick={() => setRetry(value => value + 1)}>Retry video playback</button>}
         {media && <><button className="button" disabled={working} onClick={() => void act(() => save())}><Download size={16}/>Save video</button><button className="button" disabled={working} onClick={() => void act(() => save(true))}><Share2 size={16}/>Share / save</button></>}
         {terminal && <button className="text-button" disabled={working} onClick={() => void act(() => onAction(job, 'remove'))}>Remove clip</button>}

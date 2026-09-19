@@ -2,7 +2,7 @@
 
 Create worlds, play AI-powered text adventures, and keep your stories on your device.
 
-Wayfarer is a mobile-first mini app for **Layla**, with an optional **Wayfarer PC Companion** for local video generation.
+Wayfarer is a mobile-first mini app for **Layla**, with an optional direct connection to **ComfyUI on your PC** for local video generation.
 
 ## A look inside
 
@@ -28,14 +28,9 @@ Wayfarer is a mobile-first mini app for **Layla**, with an optional **Wayfarer P
 
 ## Download and install
 
-Download both apps from [Wayfarer 1.4.2 Releases](https://github.com/Darker117/wayfarer-layla/releases/tag/v1.4.2):
+Download the [Wayfarer 1.5.0 mini-app ZIP](https://github.com/Darker117/wayfarer-layla/releases/download/v1.5.0/wayfarer-1.5.0.zip) and import it into Layla.
 
-| Download | Install on | Purpose |
-| --- | --- | --- |
-| [Wayfarer mini-app](https://github.com/Darker117/wayfarer-layla/releases/download/v1.4.2/wayfarer-1.4.2.zip) | Android phone, inside Layla | Create and play stories; send scenes for video generation. |
-| [Wayfarer PC Companion](https://github.com/Darker117/wayfarer-layla/releases/download/v1.4.2/wayfarer-pc-companion-1.4.2.zip) | Windows PC | Connect Wayfarer to your existing ComfyUI setup and manage connection codes. |
-
-For the PC Companion, extract the ZIP and double-click **Start-Wayfarer-PC-Companion.cmd**. Its browser page creates reusable codes for **10, 20, or 30 minutes**, or **Forever**, and lets you delete them. See [companion setup](gateway/README.md) for required runtimes and models, then [phone connection instructions](docs/VIDEO.md). It uses your existing ComfyUI installation; model weights are not bundled.
+For video, run your existing ComfyUI and enter its address in **Video settings → PC connection**. No companion app or pairing code is needed. See [direct connection setup](docs/VIDEO.md), including private access from your phone away from home. Model weights are not bundled. Removing a clip from Wayfarer clears its story entry and ComfyUI history; the file remains in the PC's output folder.
 
 ### Install the Layla mini-app
 
@@ -55,7 +50,6 @@ Generation uses Layla's configured model. Wayfarer requires no separate API key.
 ## More
 
 - [Local video setup and operation](docs/VIDEO.md)
-- [Wayfarer PC Companion](gateway/README.md)
 - [Development and usage guide](docs/DEVELOPMENT.md)
 - [Script compatibility](COMPATIBILITY.md)
 - [Validation notes](VALIDATION.md)

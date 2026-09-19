@@ -35,10 +35,12 @@ describe('video public context boundary',()=>{
   });
 });
 describe('video endpoint selection',()=>{
-  it('permits private HTTPS and desktop loopback only',()=>{
+  it('permits HTTPS, private LAN and Tailscale addresses',()=>{
     expect(connectionUrl('https://desktop.example.ts.net')).toBe('https://desktop.example.ts.net');
-    expect(connectionUrl('http://127.0.0.1:8787')).toBe('http://127.0.0.1:8787');
-    for(const url of ['http://192.168.1.2:8787','https://name:secret@example.com','https://example.com?token=secret','file:///tmp/a','https://example.com/admin']) expect(()=>connectionUrl(url)).toThrow();
+    expect(connectionUrl('http://127.0.0.1:8188')).toBe('http://127.0.0.1:8188');
+    expect(connectionUrl('http://192.168.1.2:8188')).toBe('http://192.168.1.2:8188');
+    expect(connectionUrl('http://100.100.1.2:8188')).toBe('http://100.100.1.2:8188');
+    for(const url of ['http://8.8.8.8:8188','https://name:secret@example.com','https://example.com?token=secret','file:///tmp/a','https://example.com/admin']) expect(()=>connectionUrl(url)).toThrow();
   });
 });
 describe('AI video plans and arbitrary whole-second duration',()=>{
