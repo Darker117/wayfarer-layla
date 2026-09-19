@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Wayfarer PC Companion</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,Segoe UI,system-ui,sans-serif;color:#e9eef6;background:#252830;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;padding:clamp(22px,6vw,64px) 20px;min-height:100vh;background:radial-gradient(ellipse at 80% 0,#34405488,transparent 65%),#252830}
+    main{max-width:820px;margin:auto}.eyebrow{font-size:11px;letter-spacing:.19em;text-transform:uppercase;font-weight:750;color:#a9bddb}
+    header{margin-bottom:32px}h1{font-size:clamp(27px,5vw,40px);letter-spacing:-.04em;margin:12px 0}p{color:#b9c5d6;line-height:1.7;margin:8px 0}h2{margin:0 0 12px;font-size:20px;letter-spacing:-.02em}
+    .panel{border:1px solid #ffffff10;border-radius:24px;padding:clamp(22px,4vw,32px);background:linear-gradient(135deg,#ffffff06,#ffffff01);box-shadow:12px 12px 30px #171a20,-6px -6px 24px #42475335;margin-bottom:24px}
+    .controls{display:flex;gap:18px;align-items:end;margin-top:24px;flex-wrap:wrap}.field{display:flex;flex-direction:column;gap:10px;flex:1;min-width:180px}label{font-size:13px;font-weight:650;color:#c3cfdf}
+    select,button{font:inherit;min-height:46px;border-radius:13px}select{width:100%;padding:12px 15px;color:#ecf1f8;background:#25282e;border:1px solid #ffffff07;box-shadow:inset 5px 5px 10px #16191e,inset -3px -3px 8px #3b40494d}
+    button{cursor:pointer;padding:11px 18px;color:#e8f1ff;background:#303640;border:1px solid #ffffff0d;box-shadow:5px 5px 12px #181b22,-3px -3px 10px #42495740;font-weight:650}
+    button:hover{background:#3a4454}button:active{box-shadow:inset 3px 3px 8px #181b22}button.primary{background:#91b4e6;color:#13263d;box-shadow:5px 5px 14px #151d2b;border-color:#c2d8f744}button.primary:hover{background:#b3cef1}
+    button:disabled{opacity:.6;cursor:wait}button:focus-visible,select:focus-visible{outline:2px solid #a9cafa;outline-offset:4px}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.count{font-size:13px;color:#a8b6cc}
+    .code-row{padding:22px 0;border-top:1px solid #ffffff0c;display:flex;align-items:center;justify-content:space-between;gap:18px}.code-row:first-child{margin-top:10px}.code-value{font-size:clamp(20px,4vw,27px);letter-spacing:.06em;color:#d4e6ff;user-select:all;overflow-wrap:anywhere}.meta{font-size:12px;margin-top:8px;line-height:1.6;color:#aab8ce}.actions{display:flex;gap:10px}.delete{color:#f3baba;background:transparent;box-shadow:none}.expired .code-value{color:#a5aebb}.empty{padding:12px 0;color:#aab8ce}
+    #status{min-height:26px;margin:16px 0 0;font-size:13px}#status.error{color:#ffc5c5}.small{font-size:12px;color:#9eacc1}.intro{max-width:620px}
+    @media(max-width:540px){.code-row{align-items:flex-start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.controls>button{width:100%}.panel{border-radius:20px}}
+    @media(prefers-reduced-motion:no-preference){button{transition:background .15s,box-shadow .15s}}
+  </style>
+</head>
+<body>
+  <main>
+    <header><span class="eyebrow">Local video for Layla</span><h1>Wayfarer PC Companion</h1><p class="intro">Your PC brings the story to life. Connect Wayfarer to your ComfyUI setup, then generate scenes from your phone.</p></header>
+    <section class="panel" aria-labelledby="connect-title">
+      <h2 id="connect-title">Connect your phone</h2>
+      <p>Open <strong>Video settings</strong> in Wayfarer. Enter this PC’s private HTTPS address and one of your connection codes, then choose <strong>Pair desktop</strong>.</p>
+      <div class="controls"><div class="field"><label for="duration">Code works for</label><select id="duration"><option value="forever" selected>Forever — until deleted</option><option value="10">10 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option></select></div><button class="primary" id="create">Create code</button></div>
+      <p class="small">Codes are reusable. The duration controls how long new devices can connect. Deleting a code also disconnects devices paired with it.</p>
+      <p id="status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="panel" aria-labelledby="codes-title"><div class="section-head"><h2 id="codes-title">Your connection codes</h2><span id="count" class="count"></span></div><div id="codes"><p class="empty">Loading your codes…</p></div></section>
+  </main>
+  <script>
+    const list=document.querySelector('#codes'),status=document.querySelector('#status'),create=document.querySelector('#create');
+    const localHeaders={'X-Wayfarer-Local':'1'};
+    let codes=[];
+    function message(text,error=false){status.textContent=text;status.classList.toggle('error',error);}
+    async function request(path,options={}){const r=await fetch(path,{...options,headers:{...localHeaders,...options.headers}});const data=await r.json();if(!r.ok)throw new Error(data.error||'The companion could not complete that action.');return data;}
+    function render(){
+      list.replaceChildren();document.querySelector('#count').textContent=String(codes.length);
+      if(!codes.length){const p=document.createElement('p');p.className='empty';p.textContent='Create a code to connect Wayfarer to this PC.';list.append(p);return;}
+      for(const item of codes){
+        const expired=item.expires!==null&&item.expires<=Date.now(),row=document.createElement('article');row.className='code-row'+(expired?' expired':'');row.dataset.id=item.id;
+        const details=document.createElement('div'),value=document.createElement('code');value.className='code-value';value.textContent=item.code;details.append(value);
+        const meta=document.createElement('p');meta.className='meta';meta.textContent=(item.expires===null?'Forever · until you delete it':(expired?'Expired ':'Expires ')+new Date(item.expires).toLocaleString())+' · '+item.devices+' connected '+(item.devices===1?'device':'devices');details.append(meta);row.append(details);
+        const actions=document.createElement('div');actions.className='actions';
+        const copy=document.createElement('button');copy.textContent='Copy';copy.disabled=expired;copy.setAttribute('aria-label','Copy code '+item.code);copy.onclick=async()=>{try{await navigator.clipboard.writeText(item.code);message('Connection code copied.');}catch{message('Select the code to copy it manually.');}};
+        const remove=document.createElement('button');remove.textContent='Delete';remove.className='delete';remove.setAttribute('aria-label','Delete code '+item.code);remove.onclick=async()=>{remove.disabled=true;try{await request('/codes/'+item.id,{method:'DELETE'});await load();message('Code deleted. Devices paired with it have been disconnected.');}catch(e){message(e.message,true);remove.disabled=false;}};
+        actions.append(copy,remove);row.append(actions);list.append(row);
+      }
+    }
+    async function load(){codes=await request('/codes');codes.sort((a,b)=>b.createdAt-a.createdAt);render();}
+    create.onclick=async()=>{create.disabled=true;try{const selection=document.querySelector('#duration').value;await request('/code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({durationMinutes:selection==='forever'?null:Number(selection)})});await load();message('Code created. You can use it more than once.');}catch(e){message(e.message,true);}finally{create.disabled=false;}};
+    load().catch(e=>message(e.message,true));setInterval(()=>{if(!document.hidden)load().catch(()=>{});},30000);
+  </script>
+</body>
+</html>

@@ -4,10 +4,10 @@ A mobile-first text-adventure studio: create reusable worlds, play with your loc
 
 ## Import on Android
 
-1. Copy `release/wayfarer-1.1.3.zip` to the phone's Downloads folder.
+1. Copy `release/wayfarer-1.3.0.zip` to the phone's Downloads folder.
 2. In Layla, open **Apps → + → Import → Zip File** and choose the ZIP.
 3. Return to **Apps**, search **Wayfarer**, and open its tile. The Browse Apps page can keep showing an Add button after a custom ZIP import on 7.4; launch from the main Apps list. Choose a scenario, then **Begin adventure**.
-4. Write a **Do**, **Say**, or **Story** action, or press the send arrow with an empty box to **continue**. Layla uses its currently configured model. No API key is required.
+4. Write a **Do**, **Say**, **Think**, or **Story** action, or press the send arrow with an empty box to **continue**. Layla uses its currently configured model. No API key is required.
 
 Built for **Layla 7.4.0 Direct**. The pinned SDK 7.5.2 automatically uses the older host protocol; this app does not depend on native model tool calling.
 
@@ -27,10 +27,36 @@ Storage regression tests cover rejected startup, recovery, malformed rows, confi
 - **Scenarios**: create or edit a reusable template, generate a draft with AI, manage cards, and attach scripts. AI drafts are reviewed before saving.
 - **Adventures**: resume, archive, restore, or delete a playthrough. Every new adventure gets independent cards, scripts, and state; later template edits do not change existing adventures.
 - **Narrator rules**: new and AI-generated scenarios include instructions against repetition, invented player actions or dialogue, choice lists, and closing narrator questions. These rules also accompany generation in existing adventures without rewriting saved world data. Model adherence still depends on the loaded model.
-- **Play**: streamed prose when scripts are off; scripted output appears after the Output hook. Cancel leaves the last saved state intact. **Redo** beside Do/Say/Story resends the latest turn’s original action and replaces its response from a checkpoint. It preserves any unsent draft and is disabled before the first turn or while generating. Undo restores cards, script state, and adventure facts together. Edit adjusts the latest visible passage; with scripts, use Undo for a full state rollback.
+- **Play**: streamed prose when scripts are off; scripted output appears after the Output hook. Cancel leaves the last saved state intact. **Redo** beside Do/Say/Think/Story resends the latest turn’s original action and replaces its response from a checkpoint. It preserves any unsent draft and is disabled before the first turn or while generating. Undo restores cards, script state, and adventure facts together. Edit adjusts the latest visible passage; with scripts, use Undo for a full state rollback.
 - **Adventure menu → Story cards**: edit exact entries/notes or import an AI Dungeon card JSON export. Import supports keeping all copies, skipping completely identical objects, or replacing matching title + triggers. Different notes are never treated as an identical duplicate. Export retains unknown fields and both character-creation flag spellings. The flag is preserved for round trips; this release has no character-creation questionnaire.
 - **Adventure menu → Adventure memory**: write exact facts for context. Optionally select a Layla character and sync lore/facts into built-in memory. Sync is manual; sync again after Undo or edits. Native recall prioritizes matching current card entries within your context budget. Private storage remains authoritative. Ordinary card notes and script brains are never mirrored. Unlinking does not delete host memories.
 - **Settings → Export backup**: includes scenarios, adventures, scripts, cards, and turn checkpoints. Restore adds independent copies and clears imported host-memory bindings. A story-card export alone does not contain scripts or the entire scenario.
+
+## Private thoughts and NPC perspective
+
+**Say** is spoken dialogue; **Think** is the player's private thought. The composer explains the selected mode and saved history labels each distinctly. Think is saved as its own mode through replay, Redo, Undo, transcript exports and backups. It is unrelated to the model's optional **Show thinking** panel.
+
+Narrator instructions limit each NPC to witnessed, heard, disclosed or otherwise established knowledge. World lore, plot essentials and adventure facts are labeled as narrator reference, not common NPC knowledge. Private player thoughts receive explicit boundaries even when old context is shortened. Instructions preserve source, uncertainty and privacy in summaries and lore; explicit dialogue or an established in-world ability may reveal a fact.
+
+The shared prose guidance asks the model never to use “ozone” as a generated descriptor. It accompanies ordinary turns, Redo, script narrative requests and scenario/card JSON drafting. Per the chosen instruction-only approach, there is no output filter, phrase substitution, automatic retry, added model call, or NPC knowledge database. The model can still disregard instructions, including during streaming. JSON, authored text, existing cards, scripts and saved state are never rewritten to enforce this preference. New generated scenarios retain these rules alongside their custom style; existing saved instructions remain untouched.
+
+Wayfarer does not summarize turns automatically or mirror them to Layla memory. Only enabled card entries and explicitly saved adventure facts are mirrored verbatim, including existing privacy/uncertainty labels. If you manually place a private thought into facts or lore, identify whose knowledge it represents. Scripts retain their own memory behavior and may replace context; see [compatibility](../COMPATIBILITY.md).
+
+<p><img src="screenshots/private-thought-390.png" width="240" alt="Private Think and audible Say in saved history" /> <img src="screenshots/latest-arrow-390.png" width="240" alt="Jump to latest above the composer in a shortened viewport" /></p>
+
+## Live answers and optional thinking
+
+With scripts off, the answer updates as Layla sends text. **Show thinking** appears only when the model supplies reasoning through the SDK's separate reasoning channel. It starts collapsed and can be toggled while generation is running. Not all models provide this channel. Wayfarer does not invent thinking or infer it from ordinary prose.
+
+Scrolling upward pauses following. A floating down-arrow fades in above the composer whenever the latest text is below view, including during active scrolling. It hides near the end. Tapping returns to the latest text and resumes following streamed content. Reduced-motion preferences skip the smooth scroll; composer and visual-viewport measurements keep the control above the input area.
+
+Thinking is temporary: it is available for the latest completed turn until you start another turn, undo it, or leave the story. It is never written into saved turns, backups, story context, cards, or Layla memory. Redo starts with fresh, collapsed thinking. Cancel and errors discard both partial channels and preserve the saved adventure.
+
+Input/Context-only scripts can finish their work and then stream both public channels when their Library and Output source are empty. Otherwise, both channels are buffered until the Output hook finishes. Inner Self, Auto-Cards, and custom hooks may consume private model output, transform it, or suppress it entirely. Only the processed story is shown; script-managed thinking is not exposed.
+
+The existing bundled-script workflow is retained by choice; no separate private/public model passes are added. See [streaming investigation](STREAMING.md) for the upstream constraints, accepted behavior, and pending native verification.
+
+The pinned SDK handles standard `<think>…</think>` blocks, including split marker chunks. Wayfarer uses its content/reasoning events and final completion fields without another parser. Non-protocol or malformed markers follow SDK behavior. An unclosed thinking block has no final answer and the turn is not saved.
 
 ## Scripts
 
@@ -78,3 +104,6 @@ Card import: 10 MB / 3,000 cards. Backup restore: 50 MB. Script source: 2 MB per
 - `release/`: importable ZIP and checksum.
 
 Test coverage and device findings are summarized in [Validation](../VALIDATION.md). Private device evidence is excluded from the repository.
+# Optional video development
+
+Wayfarer 1.4 adds `src/video.ts`, `src/VideoPanel.tsx`, and the fixed-workflow desktop service under `gateway/`. Run `npm run test:gateway` for its independent HTTP/security/state tests and `npm run video:gateway` to start it. Full usage, pairing, Tailscale, generation boundaries and storage behavior are described in [VIDEO.md](VIDEO.md). Secrets and media live outside the repository; no model weights are packaged.

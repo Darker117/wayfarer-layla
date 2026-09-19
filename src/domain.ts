@@ -1,6 +1,6 @@
 import { narratorInstructions } from './narration';
 
-export type Mode = 'do' | 'say' | 'story' | 'continue';
+export type Mode = 'do' | 'say' | 'think' | 'story' | 'continue';
 export type Theme = 'forest' | 'dusk' | 'ocean' | 'ember';
 export type JsonObject = Record<string, unknown>;
 export interface CardFields extends JsonObject {
@@ -32,7 +32,8 @@ export interface Adventure extends World, RuntimeSnapshot {
 }
 export interface Settings { maxChars: number; fontSize: number }
 export interface Store { version: 1; scenarios: Scenario[]; adventures: Adventure[]; settings: Settings }
-export interface HistoryEntry { text: string; rawText: string; type: 'start' | 'continue' | 'do' | 'say' | 'story'; }
+// Keep the legacy script type vocabulary; metadata distinguishes private player thought.
+export interface HistoryEntry { text: string; rawText: string; type: 'start' | 'continue' | 'do' | 'say' | 'story'; sourceMode?: 'think'; visibility?: 'private'; }
 export const uid = () => globalThis.crypto?.randomUUID?.() ?? `wf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 export const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 export const emptyScripts = (): Scripts => ({ enabled: false, preset: 'custom', library: '', input: '', context: '', output: '' });

@@ -23,8 +23,9 @@ it('Auto-Cards directs internal generation into a new card across real hooks', a
   let a: Adventure = startAdventure(s);
   const contexts: string[] = [];
   const run = async (mode: 'story' | 'continue', input: string) => {
-    a = await processTurn({ adventure: a, mode, input, settings: { maxChars: 16000, fontSize: 18 }, runHook: runIsolated, signal: new AbortController().signal, onText: () => { throw new Error('Raw script text must not stream'); }, onStatus: () => {}, generate: async ({ context }) => {
+    a = await processTurn({ adventure: a, mode, input, settings: { maxChars: 16000, fontSize: 18 }, runHook: runIsolated, signal: new AbortController().signal, onText: () => { throw new Error('Raw script text must not stream'); }, onThinking: () => { throw new Error('Script reasoning must not stream'); }, onStatus: () => {}, generate: async ({ context, onText, onThinking }) => {
       contexts.push(context);
+      onText('Internal card draft'); onThinking?.('Internal card reasoning');
       return 'Leah is the stationmaster of Meridian Station and an expert pilot. Leah repairs ships and protects the station crew from wandering smugglers. Leah carries a brass key and knows every maintenance passage in the station. Leah learned engineering from her grandmother on a remote mining colony. Leah keeps careful records of all ships entering the docking bay. Leah believes every stranded traveler deserves a safe place to sleep. Leah has a dry sense of humor and rarely raises her voice in an argument. Leah tends a small garden of medicinal herbs near the central reactor. Leah maintains friendly ties with traders from the distant outer systems. Leah secretly hopes to restore the abandoned observatory above the station. Leah wears a dark blue uniform with silver patches from previous missions.';
     } });
   };

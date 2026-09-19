@@ -42,7 +42,7 @@ export function validateStore(parsed: unknown): Store {
     assert(a.turns.length <= 20000, 'adventure has too many turns.');
     for (const t of a.turns) {
       stringFields(t, ['id', 'mode', 'input', 'scriptInput', 'output']);
-      assert(['do', 'say', 'story', 'continue'].includes(t.mode) && Array.isArray(t.logs) && t.logs.every((x: unknown) => typeof x === 'string') && Array.isArray(t.contextCards), 'invalid turn.');
+      assert(['do', 'say', 'think', 'story', 'continue'].includes(t.mode) && Array.isArray(t.logs) && t.logs.every((x: unknown) => typeof x === 'string') && Array.isArray(t.contextCards), 'invalid turn.');
       validateSnapshot(t.before); if (t.afterInput !== undefined) validateSnapshot(t.afterInput);
     }
     if (a.memoryBinding !== undefined) {

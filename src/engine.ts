@@ -1,10 +1,10 @@
 import { type Adventure, type Mode, type Settings, type Turn, clone, snapshot, uid } from './domain';
-import { actionText, buildContext, historyFor } from './context';
+import { actionText, buildContext, historyFor, inputHistory } from './context';
 import type { RunHook, Hook, HookRequest } from './scripts/runtime';
 
-export interface GenerateRequest { context: string; scripted: boolean; onText: (text: string) => void; signal: AbortSignal }
+export interface GenerateRequest { context: string; scripted: boolean; onText: (text: string) => void; onThinking?: (text: string) => void; signal: AbortSignal }
 export type Generate = (request: GenerateRequest) => Promise<string>;
-export interface TurnRequest { adventure: Adventure; mode: Mode; input: string; settings: Settings; signal: AbortSignal; generate: Generate; runHook: RunHook; onText: (text: string) => void; onStatus: (text: string) => void; retry?: boolean; recalledCardIds?: string[] }
+export interface TurnRequest { adventure: Adventure; mode: Mode; input: string; settings: Settings; signal: AbortSignal; generate: Generate; runHook: RunHook; onText: (text: string) => void; onThinking?: (text: string) => void; onStatus: (text: string) => void; retry?: boolean; recalledCardIds?: string[] }
 
 export async function processTurn(req: TurnRequest): Promise<Adventure> {
   const last = req.adventure.turns.at(-1);
@@ -30,16 +30,28 @@ export async function processTurn(req: TurnRequest): Promise<Adventure> {
   let incoming = { text: req.retry ? last!.scriptInput : actionText(mode, input), stop: false };
   if (!req.retry || !last!.afterInput) incoming = await hook('input', incoming.text, { actionCount: history.length, characterNames: ['You'] });
   const afterInput = snapshot(a);
-  if (incoming.text) history.push({ text: incoming.text, rawText: actionText(mode, input), type: mode === 'continue' ? 'story' : mode });
+  if (incoming.text) history.push(inputHistory(mode, input, incoming.text));
   let output = '', stopped = incoming.stop, selected: string[] = [];
   if (!stopped) {
-    const built = buildContext(a, incoming.text, req.settings, req.recalledCardIds);
+    const built = buildContext(a, incoming.text, req.settings, req.recalledCardIds, mode);
     selected = built.selected;
     const contextual = await hook('context', built.text, { actionCount: history.length, characterNames: ['You'], maxChars: req.settings.maxChars, memoryLength: built.memoryLength });
     stopped = contextual.stop;
     if (!stopped) {
-      check(); req.onStatus(a.scripts.enabled ? 'Layla is writing · script output stays private until processed…' : 'Layla is writing…');
-      const raw = await req.generate({ context: contextual.text.slice(-req.settings.maxChars), scripted: a.scripts.enabled, onText: a.scripts.enabled ? () => {} : req.onText, signal: req.signal });
+      // With no Library or Output source, runtime's fallback is exactly
+      // ({ text, stop }); Input/Context have already finished before this point.
+      const streamPublic = !a.scripts.enabled || (!a.scripts.library.trim() && !a.scripts.output.trim());
+      check(); req.onStatus(streamPublic ? 'Layla is writing…' : 'Running scripts…');
+      // Output hooks may transform/suppress any prefix, and bundled scripts
+      // repurpose generation for private NPC/card work. Buffer both channels.
+      let receiving = true;
+      const publish = (callback?: (text: string) => void) => (text: string) => {
+        if (receiving && !req.signal.aborted && streamPublic) callback?.(text);
+      };
+      let raw: string;
+      try {
+        raw = await req.generate({ context: contextual.text.slice(-req.settings.maxChars), scripted: a.scripts.enabled, onText: publish(req.onText), onThinking: publish(req.onThinking), signal: req.signal });
+      } finally { receiving = false; }
       check();
       if (!raw.trim()) throw new Error('Layla returned an empty response. Check the loaded model and try again.');
       const final = await hook('output', raw, { actionCount: history.length, characterNames: ['You'] });

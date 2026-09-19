@@ -47,7 +47,7 @@ describe('faithful cards', () => {
 });
 describe('adventure transactions', () => {
   const signal = () => new AbortController().signal;
-  it.each(['do', 'say', 'story', 'continue'] as const)('redo resends the original %s turn and preserves history on failure', async mode => {
+  it.each(['do', 'say', 'think', 'story', 'continue'] as const)('redo resends the original %s turn and preserves history on failure', async mode => {
     const a = startAdventure(initialStore().scenarios[0]);
     const contexts: string[] = [];
     const base = { adventure: a, mode: 'do' as const, input: 'open the gate', settings: { maxChars: 12000, fontSize: 18 }, signal: signal(), runHook: runIsolated, onText: () => {}, onStatus: () => {} };

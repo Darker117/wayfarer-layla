@@ -1,7 +1,8 @@
 import { LaylaSDK, type LaylaMemory } from '@layla-network/sdk';
 import { type Adventure, clone } from './domain';
 import type { Generate } from './engine';
-import { NARRATION_RULES } from './narration';
+import { KNOWLEDGE_RULES, NARRATION_RULES, PROSE_STYLE_RULES } from './narration';
+import { readResponse } from './streaming';
 
 declare global { interface Window { ReactNativeWebView?: { postMessage(message: string): void }; } }
 export const hasNativeBridge = () => typeof window.ReactNativeWebView?.postMessage === 'function';
@@ -27,18 +28,16 @@ export async function withTimeout<T>(fn: (signal: AbortSignal) => Promise<T>, ms
   const timer = setTimeout(() => controller.abort(), ms);
   try { return await fn(controller.signal); } finally { clearTimeout(timer); parent?.removeEventListener('abort', cancel); }
 }
-export const generate: Generate = async ({ context, scripted, onText, signal }) => {
+export const generate: Generate = async ({ context, scripted, onText, onThinking, signal }) => {
   if (!hasNativeBridge()) throw new Error('Open Wayfarer inside Layla to generate with your loaded model. You can still create and edit worlds here.');
   const stream = layla.chat.completions.stream({ messages: [
     { role: 'system', content: scripted ? `Follow the task and formatting instructions in the supplied context. It may request narrative prose, structured character updates, or story-card entries. Complete the requested task faithfully. For narrative prose, apply these narrator rules:\n${NARRATION_RULES}\nFor structured character updates and story-card tasks, preserve the requested format.` : `You are the narrator of an interactive fictional adventure. Follow the supplied AI Instructions and continue from Recent Story. Return only the next passage of the story.\n${NARRATION_RULES}` },
     { role: 'user', content: context },
   ], signal });
-  stream.on('content', (_delta, snapshot) => onText(snapshot));
-  stream.on('error', () => {});
-  return await stream.finalContent() ?? '';
+  return readResponse(stream, { onText, onThinking, signal });
 };
 export async function generateJson(prompt: string, onText: (text: string) => void, signal: AbortSignal): Promise<unknown> {
-  const raw = await generate({ context: prompt, scripted: true, onText, signal });
+  const raw = await generate({ context: `${prompt}\n\nFor generated prose within the requested JSON format:\n${KNOWLEDGE_RULES}\n${PROSE_STYLE_RULES}`, scripted: true, onText, signal });
   const clean = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   try { return JSON.parse(clean); } catch { throw new Error('The model did not return valid JSON. The draft is shown below; you can edit it or generate again.'); }
 }
